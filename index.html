@@ -19,12 +19,13 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; background: var(--main-bg); color: #202124; }
 
         /* LOGIN PANE STYLES */
-        #login-overlay, #tenant-login-overlay {
+        #login-overlay, #tenant-login-overlay, #settings-password-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #2a2a2a 0%, #111 100%);
             display: flex; align-items: center; justify-content: center; z-index: 2000;
             transition: 0.5s;
         }
+        #settings-password-modal { z-index: 2500; background: rgba(0,0,0,0.9); display: none; }
         #tenant-login-overlay { z-index: 1999; background: radial-gradient(circle, #1a3a1a 0%, #0a2a0a 100%); display: none; }
         .login-card {
             background: white; padding: 40px; border-radius: 12px; width: 350px;
@@ -34,15 +35,12 @@
         .login-card input { width: 100%; margin-bottom: 15px; box-sizing: border-box; }
         .reset-link { font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline; }
         .tenant-link { font-size: 14px; color: var(--success); cursor: pointer; margin-top: 15px; }
-        #otpStatus { 
+        #otpStatus, #settings-password-status { 
             font-size: 14px; 
             margin-top: 15px; 
             padding: 10px; 
             border-radius: 5px; 
             font-weight: 500;
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
         }
 
         /* SIDEBAR NAVIGATION */
@@ -52,6 +50,8 @@
         .nav-item { padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-muted); transition: 0.2s; font-size: 14px; }
         .nav-item:hover { background: #333; color: white; }
         .nav-item.active { background: #333; color: white; border-left: 4px solid var(--accent); }
+        .nav-item.locked { position: relative; }
+        .nav-item.locked::after { content: "🔒"; margin-left: auto; font-size: 14px; }
 
         /* MAIN LAYOUT */
         .wrapper { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
@@ -330,7 +330,7 @@
         </div>
     </div>
 
-    <!-- TENANT LOGIN OVERLAY (NEW) -->
+    <!-- TENANT LOGIN OVERLAY -->
     <div id="tenant-login-overlay">
         <div class="login-card">
             <h2>👤 Tenant Portal</h2>
@@ -344,7 +344,19 @@
         </div>
     </div>
 
-    <!-- TENANT PORTAL (NEW) -->
+    <!-- SETTINGS PASSWORD MODAL -->
+    <div id="settings-password-modal">
+        <div class="login-card">
+            <h2>🔒 Settings Access</h2>
+            <p style="font-size: 13px; color: #666;">Enter settings password to continue</p>
+            <input type="password" id="settingsPasswordInput" placeholder="Settings Password">
+            <button class="btn btn-p" style="width:100%; padding: 12px;" onclick="verifySettingsPassword()">Access Settings</button>
+            <button class="btn btn-d" style="width:100%; padding: 12px; margin-top: 10px;" onclick="closeSettingsModal()">Cancel</button>
+            <div id="settings-password-status" style="font-size: 14px; margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- TENANT PORTAL -->
     <div id="tenant-portal">
         <div class="portal-header">
             <h2>👤 Tenant Portal - <span id="portalTenantName"></span></h2>
@@ -370,7 +382,7 @@
             <div class="nav-item" onclick="showView('email')">📧 Email</div>
             <div class="nav-item" onclick="showView('sms')">📱 SMS</div>
             <div class="nav-item" onclick="showView('mpesa')">💳 M-Pesa</div>
-            <div class="nav-item" onclick="showView('settings')">⚙️ Settings</div>
+            <div class="nav-item locked" onclick="promptSettingsPassword()">⚙️ Settings 🔒</div>
         </div>
         <div style="padding: 10px 20px;">
             <button class="btn btn-w" style="width:100%; margin-bottom:5px;" onclick="secureRemoveBuilding()">🔐 Admin Wipe</button>
@@ -434,7 +446,7 @@
                     </div>
                 </div>
 
-                <!-- TENANTS VIEW - UPDATED WITH SMS BUTTON -->
+                <!-- TENANTS VIEW -->
                 <div id="view-tenants" class="view-section hidden">
                     <div class="card">
                         <h3>👤 Register Tenant</h3>
@@ -565,7 +577,7 @@
                     </div>
                 </div>
 
-                <!-- EMAIL VIEW (Existing) -->
+                <!-- EMAIL VIEW -->
                 <div id="view-email" class="view-section hidden">
                     <div class="card">
                         <h3>📧 Email Notifications</h3>
@@ -655,7 +667,7 @@
                     </div>
                 </div>
 
-                <!-- NEW SMS VIEW -->
+                <!-- SMS VIEW -->
                 <div id="view-sms" class="view-section hidden">
                     <div class="card">
                         <h3>📱 SMS Messaging</h3>
@@ -716,7 +728,7 @@
                     </div>
                 </div>
 
-                <!-- NEW M-PESA VIEW -->
+                <!-- M-PESA VIEW -->
                 <div id="view-mpesa" class="view-section hidden">
                     <div class="card">
                         <h3>💳 M-Pesa Payments</h3>
@@ -747,6 +759,7 @@
                             
                             <div class="mpesa-instruction">
                                 <p>📱 Customer will receive an STK push on their phone to enter M-Pesa PIN</p>
+                                <p><strong>Note:</strong> M-Pesa credentials are hardcoded in the system</p>
                             </div>
                             
                             <button class="btn btn-mpesa" onclick="sendSTKPush()" style="width: 100%; padding: 15px; font-size: 16px;">
@@ -775,7 +788,7 @@
                     </div>
                 </div>
 
-                <!-- SETTINGS VIEW (UPDATED) -->
+                <!-- SETTINGS VIEW (Protected by password) -->
                 <div id="view-settings" class="view-section hidden">
                     <div class="card">
                         <h3>⚙️ Settings</h3>
@@ -795,6 +808,10 @@
                                 <input type="password" id="deletePassInput" placeholder="Delete Password">
                                 <button class="btn btn-d" onclick="saveDeletePass()">Set</button>
                             </div>
+                            <div class="form-row">
+                                <input type="password" id="settingsPassInput" placeholder="Settings Access Password">
+                                <button class="btn btn-v" onclick="saveSettingsPass()">Set Settings Password</button>
+                            </div>
                             <hr>
                             <h4>OTP Recovery Email</h4>
                             <div class="form-row">
@@ -809,20 +826,13 @@
                                 <button class="btn btn-sms" onclick="saveSMSSettings()">Save SMS Settings</button>
                             </div>
                             <hr>
-                            <h4>M-Pesa API Settings (Daraja)</h4>
-                            <div class="form-row">
-                                <input type="text" id="mpesaConsumerKey" placeholder="Consumer Key">
-                                <input type="text" id="mpesaConsumerSecret" placeholder="Consumer Secret">
-                                <input type="text" id="mpesaPasskey" placeholder="Passkey">
-                                <input type="text" id="mpesaShortCode" placeholder="Shortcode (e.g., 174379)">
-                                <button class="btn btn-mpesa" onclick="saveMpesaSettings()">Save M-Pesa Settings</button>
-                            </div>
-                            <hr>
                             <h4>Company Information</h4>
                             <div class="form-row">
                                 <input type="text" id="companyName" placeholder="Company Name" value="Flat Master Pro">
                                 <button class="btn btn-s" onclick="saveCompanyName()">Save</button>
                             </div>
+                            <hr>
+                            <p><small>🔒 M-Pesa settings are hardcoded in the system and cannot be changed here</small></p>
                         </div>
                     </div>
                 </div>
@@ -830,11 +840,133 @@
         </div>
     </div>
 
-    <!-- RECEIPT PRINT AREA (Existing) -->
-    <div id="printArea">[receipt content same as before]</div>
+    <!-- RECEIPT PRINT AREA -->
+    <div id="printArea" style="display: none;">
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h1 id="prBName"></h1>
+                <p id="prBLoc"></p>
+                <p>Official Payment Receipt</p>
+            </div>
+            
+            <div class="receipt-info">
+                <div><strong>Receipt No:</strong> <span id="prReceiptNo"></span></div>
+                <div><strong>Date:</strong> <span id="prDate"></span></div>
+            </div>
+            
+            <div class="tenant-details">
+                <div class="detail-row">
+                    <div class="detail-label">Tenant Name:</div>
+                    <div><span id="prTName"></span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Unit Number:</div>
+                    <div><span id="prUnit"></span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Phone:</div>
+                    <div><span id="prPhone"></span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Monthly Rent:</div>
+                    <div><span id="prMonthlyRent"></span></div>
+                </div>
+            </div>
+            
+            <h3>Payment Summary</h3>
+            <table class="finance-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Total Paid to Date</td>
+                        <td class="amount-positive" id="prTotalPaid"></td>
+                    </tr>
+                    <tr>
+                        <td>Current Balance</td>
+                        <td class="amount-negative" id="prBalanceDue"></td>
+                    </tr>
+                    <tr>
+                        <td>Outstanding Repairs</td>
+                        <td class="amount-negative" id="prMaint"></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th>Total Outstanding</th>
+                        <th id="prTotal"></th>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="payment-history">
+                <h4>Payment History</h4>
+                <div id="prPaymentList"></div>
+            </div>
+            
+            <div class="footer">
+                <div>
+                    <div class="signature-line"></div>
+                    <div>Manager's Signature</div>
+                </div>
+                <div>
+                    <div class="signature-line"></div>
+                    <div>Tenant's Signature</div>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px; font-size: 12px;">Thank you for your business!</p>
+        </div>
+    </div>
 
-    <!-- STATEMENT PRINT AREA (Existing) -->
-    <div id="statementArea">[statement content same as before]</div>
+    <!-- STATEMENT PRINT AREA -->
+    <div id="statementArea" style="display: none;">
+        <div class="statement-container">
+            <div class="statement-header">
+                <h1 id="stBName"></h1>
+                <p id="stBLoc"></p>
+                <p>Building Statement</p>
+                <p>Generated: <span id="stDate"></span></p>
+            </div>
+            
+            <h3>Tenant Summary</h3>
+            <table class="statement-table">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Tenant</th>
+                        <th>Phone</th>
+                        <th>Rent</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="stTenantTable"></tbody>
+            </table>
+            
+            <h3>Active Maintenance</h3>
+            <table class="statement-table">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Issue</th>
+                        <th>Cost</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="stMaintTable"></tbody>
+            </table>
+            
+            <div class="net-total">
+                <strong>Net Position (Collected - Maintenance): KES <span id="stNet"></span></strong>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -900,10 +1032,22 @@
         let otpExpiry = null;
         let isOTPMode = false;
 
+        // Settings access variable
+        let settingsAccessed = false;
+
         // EmailJS config
         const emailjsServiceId = "service_73jwutn";
 
-        // ========== LOGIN FUNCTIONS (Existing) ==========
+        // ========== HARDCODED M-PESA CREDENTIALS ==========
+        const MPESA_CONFIG = {
+            consumerKey: "YOUR_CONSUMER_KEY_HERE", // Replace with actual consumer key
+            consumerSecret: "YOUR_CONSUMER_SECRET_HERE", // Replace with actual consumer secret
+            passkey: "YOUR_PASSKEY_HERE", // Replace with actual passkey
+            shortCode: "174379", // Replace with actual shortcode
+            environment: "sandbox" // or "production"
+        };
+
+        // ========== LOGIN FUNCTIONS ==========
         window.verifyLogin = () => {
             const input = document.getElementById('loginPass').value;
             if (isOTPMode) {
@@ -936,7 +1080,33 @@
             document.getElementById('otpStatus').innerHTML = "";
         }
 
-        // ========== NEW TENANT LOGIN FUNCTIONS ==========
+        window.resetPasswordRequest = () => {
+            const email = localStorage.getItem('recoveryMail');
+            if (!email) {
+                alert("No recovery email configured. Contact system administrator.");
+                return;
+            }
+            
+            activeOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            otpExpiry = new Date().getTime() + 300000; // 5 minutes
+            
+            emailjs.send(emailjsServiceId, "template_054xe2o", {
+                to_email: email,
+                subject: "Password Reset OTP",
+                message: `Your OTP for Flat Master Pro is: ${activeOTP}\n\nThis code expires in 5 minutes.`
+            }).then(() => {
+                isOTPMode = true;
+                document.getElementById('loginTitle').innerText = "🔑 Enter OTP";
+                document.getElementById('loginPass').placeholder = "6-digit OTP";
+                document.getElementById('loginBtn').innerText = "Verify OTP";
+                document.getElementById('otpStatus').innerHTML = '<span style="color: green;">✅ OTP sent to your email</span>';
+            }).catch(error => {
+                console.error("OTP Error:", error);
+                document.getElementById('otpStatus').innerHTML = '<span style="color: red;">❌ Failed to send OTP</span>';
+            });
+        };
+
+        // ========== TENANT LOGIN FUNCTIONS ==========
         window.showTenantLogin = () => {
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('tenant-login-overlay').style.display = 'flex';
@@ -1228,7 +1398,48 @@
             }
         };
 
-        // ========== SECURITY FUNCTIONS (Existing) ==========
+        // ========== SETTINGS PASSWORD FUNCTIONS ==========
+        window.saveSettingsPass = () => {
+            const p = document.getElementById('settingsPassInput').value;
+            if(p.length < 4) return alert("Password too short.");
+            localStorage.setItem('settingsPass', p);
+            document.getElementById('settingsPassInput').value = "";
+            alert("✅ Settings password saved.");
+        };
+
+        window.promptSettingsPassword = () => {
+            settingsAccessed = false;
+            document.getElementById('settings-password-modal').style.display = 'flex';
+            document.getElementById('settingsPasswordInput').value = '';
+            document.getElementById('settings-password-status').innerHTML = '';
+        };
+
+        window.closeSettingsModal = () => {
+            document.getElementById('settings-password-modal').style.display = 'none';
+        };
+
+        window.verifySettingsPassword = () => {
+            const input = document.getElementById('settingsPasswordInput').value;
+            const savedPass = localStorage.getItem('settingsPass');
+            
+            if (!savedPass) {
+                // If no password set, allow access
+                settingsAccessed = true;
+                document.getElementById('settings-password-modal').style.display = 'none';
+                showView('settings');
+                return;
+            }
+            
+            if (input === savedPass) {
+                settingsAccessed = true;
+                document.getElementById('settings-password-modal').style.display = 'none';
+                showView('settings');
+            } else {
+                document.getElementById('settings-password-status').innerHTML = '<span style="color: red;">❌ Incorrect password</span>';
+            }
+        };
+
+        // ========== SECURITY FUNCTIONS ==========
         window.secureRemoveBuilding = async () => {
             if(!activeBId) return alert("Select a building.");
             const savedWipePass = localStorage.getItem('wipePass');
@@ -1291,19 +1502,6 @@
             alert("✅ SMS settings saved");
         };
 
-        window.saveMpesaSettings = () => {
-            const key = document.getElementById('mpesaConsumerKey').value;
-            const secret = document.getElementById('mpesaConsumerSecret').value;
-            const passkey = document.getElementById('mpesaPasskey').value;
-            const code = document.getElementById('mpesaShortCode').value;
-            if (!key || !secret || !passkey || !code) return alert("Fill all fields");
-            localStorage.setItem('mpesaConsumerKey', key);
-            localStorage.setItem('mpesaConsumerSecret', secret);
-            localStorage.setItem('mpesaPasskey', passkey);
-            localStorage.setItem('mpesaShortCode', code);
-            alert("✅ M-Pesa settings saved");
-        };
-
         window.saveCompanyName = () => {
             const name = document.getElementById('companyName').value;
             localStorage.setItem('companyName', name);
@@ -1318,8 +1516,13 @@
             alert("✅ Password Updated!");
         };
 
-        // ========== VIEW NAVIGATION (Updated) ==========
+        // ========== VIEW NAVIGATION ==========
         window.showView = (v) => {
+            if (v === 'settings' && !settingsAccessed) {
+                promptSettingsPassword();
+                return;
+            }
+            
             document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
             document.getElementById('view-' + v).classList.remove('hidden');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -1356,14 +1559,12 @@
                 document.getElementById('adminEmail').value = localStorage.getItem('recoveryMail') || '';
                 document.getElementById('atUsername').value = localStorage.getItem('atUsername') || '';
                 document.getElementById('atApiKey').value = localStorage.getItem('atApiKey') || '';
-                document.getElementById('mpesaConsumerKey').value = localStorage.getItem('mpesaConsumerKey') || '';
-                document.getElementById('mpesaConsumerSecret').value = localStorage.getItem('mpesaConsumerSecret') || '';
-                document.getElementById('mpesaPasskey').value = localStorage.getItem('mpesaPasskey') || '';
-                document.getElementById('mpesaShortCode').value = localStorage.getItem('mpesaShortCode') || '';
+                // Settings accessed, reset flag
+                settingsAccessed = false;
             }
         };
 
-        // ========== BUILDING FUNCTIONS (Existing) ==========
+        // ========== BUILDING FUNCTIONS ==========
         window.addBuilding = async () => {
             const n = document.getElementById('bName').value;
             const l = document.getElementById('bLoc').value;
@@ -1414,7 +1615,7 @@
         };
 
         function startListeners(bId) {
-            // Houses listener - UPDATED with SMS button
+            // Houses listener
             stopTenants = onSnapshot(query(collection(db, "houses"), where("bId", "==", bId)), (s) => {
                 const led = document.getElementById('activeLedger'), tTr = document.getElementById('tTrash');
                 led.innerHTML = ""; tTr.innerHTML = "";
@@ -1459,7 +1660,7 @@
                 updateNet();
             });
 
-            // Maintenance listener (existing)
+            // Maintenance listener
             stopMaint = onSnapshot(query(collection(db, "maint"), where("bId", "==", bId)), (s) => {
                 const act = document.getElementById('mActive'), arc = document.getElementById('mArchive');
                 act.innerHTML = ""; arc.innerHTML = "";
@@ -1503,7 +1704,7 @@
                 updateNet();
             });
 
-            // Payments listener (existing)
+            // Payments listener
             stopPayments = onSnapshot(query(collection(db, "payments"), where("bId", "==", bId), orderBy("date", "desc")), (s) => {
                 localPayments = [];
                 s.forEach(d => { 
@@ -1513,7 +1714,7 @@
             });
         }
 
-        // ========== TENANT FUNCTIONS (Existing) ==========
+        // ========== TENANT FUNCTIONS ==========
         window.restoreTenant = (id) => {
             updateDoc(doc(db, "houses", id), { isTrash: false });
         };
@@ -1524,7 +1725,7 @@
             }
         };
 
-        // ========== MAINTENANCE FUNCTIONS (Existing) ==========
+        // ========== MAINTENANCE FUNCTIONS ==========
         window.completeMaintenance = (id) => {
             updateDoc(doc(db, "maint", id), { isArc: true });
         };
@@ -1539,7 +1740,7 @@
             }
         };
 
-        // ========== FETCH OVERPAYMENT FUNCTION (Existing) ==========
+        // ========== FETCH OVERPAYMENT FUNCTION ==========
         window.fetchOverpayment = async (maintId, unit, amountNeeded) => {
             try {
                 const tenantQuery = query(
@@ -1618,7 +1819,7 @@
             }
         };
 
-        // ========== PAYMENT FUNCTIONS (Existing) ==========
+        // ========== PAYMENT FUNCTIONS ==========
         window.payRent = async (houseId, unit, tenantName, currentPaid) => {
             const amount = prompt(`Enter rent payment for ${unit}:`, "0");
             if (!amount) return;
@@ -1649,7 +1850,7 @@
             alert(`✅ KES ${numAmount.toLocaleString()} recorded!`);
         };
 
-        // ========== RECEIPT FUNCTION (Existing) ==========
+        // ========== RECEIPT FUNCTION ==========
         window.printReceipt = (tenantName, unit, paid, balance, phone) => {
             const tenant = localHouses.find(h => h.hNum === unit && h.tName === tenantName);
             const monthlyRent = tenant ? tenant.rent : 0;
@@ -1701,7 +1902,7 @@
             window.print();
         };
 
-        // ========== STATEMENT FUNCTION (Existing) ==========
+        // ========== STATEMENT FUNCTION ==========
         window.genStatement = () => {
             if(!activeBId) return alert("Select a building");
             
@@ -1740,7 +1941,7 @@
             window.print();
         };
 
-        // ========== ADD TENANT FUNCTION (Updated with email) ==========
+        // ========== ADD TENANT FUNCTION ==========
         window.addTenant = async () => {
             if(!activeBId) return alert("Select a building first");
             
@@ -1774,7 +1975,7 @@
             alert("Tenant registered successfully! They can now login via Tenant Portal using their email.");
         };
 
-        // ========== ADD MAINTENANCE FUNCTION (Existing) ==========
+        // ========== ADD MAINTENANCE FUNCTION ==========
         window.addMaint = async () => {
             if(!activeBId) return alert("Select a building first");
             
@@ -1799,7 +2000,7 @@
             alert("Repair logged successfully!");
         };
 
-        // ========== ENHANCED MOVE OUT FUNCTION (NEW) ==========
+        // ========== ENHANCED MOVE OUT FUNCTION ==========
         window.tryMoveOut = async (id, rentBal, hNum) => {
             // Get all maintenance records for this unit
             const maintQuery = query(
@@ -1888,7 +2089,7 @@
             }
         };
 
-        // ========== EXPORT TO EXCEL FUNCTION (Existing) ==========
+        // ========== EXPORT TO EXCEL FUNCTION ==========
         window.exportToExcel = () => {
             try {
                 const wb = XLSX.utils.book_new();
@@ -1973,7 +2174,7 @@
             }
         };
 
-        // ========== GENERATE REPORT FUNCTION (Existing) ==========
+        // ========== GENERATE REPORT FUNCTION ==========
         window.generateReport = () => {
             try {
                 const startDate = document.getElementById('reportStartDate').value;
@@ -2054,7 +2255,7 @@
             }
         };
 
-        // ========== EXPORT REPORT TO EXCEL (Existing) ==========
+        // ========== EXPORT REPORT TO EXCEL ==========
         window.exportReportToExcel = () => {
             try {
                 const wb = XLSX.utils.book_new();
@@ -2119,7 +2320,7 @@
             }
         };
 
-        // ========== SMS FUNCTIONS (NEW) ==========
+        // ========== SMS FUNCTIONS ==========
         window.populateSMSDropdown = () => {
             const dropdown = document.getElementById('smsDropdown');
             const activeTenants = localHouses.filter(h => !h.isTrash && h.phone);
@@ -2310,7 +2511,7 @@
             document.getElementById('smsMessage').value = `Dear tenant,\n\nThis is a reminder from ${curBName}. Please ensure your rent is up to date.\n\nThank you.`;
         };
 
-        // ========== M-PESA FUNCTIONS (NEW) ==========
+        // ========== M-PESA FUNCTIONS (Using hardcoded credentials) ==========
         window.populateMpesaDropdown = () => {
             const select = document.getElementById('mpesaTenant');
             if (!select) return;
@@ -2385,24 +2586,19 @@
             
             const tenant = localHouses.find(h => h.id === tenantId);
             
-            // Check M-Pesa settings
-            const consumerKey = localStorage.getItem('mpesaConsumerKey');
-            const consumerSecret = localStorage.getItem('mpesaConsumerSecret');
-            const passkey = localStorage.getItem('mpesaPasskey');
-            const shortCode = localStorage.getItem('mpesaShortCode');
-            
-            if (!consumerKey || !consumerSecret || !passkey || !shortCode) {
-                alert("Please configure M-Pesa settings in Settings first");
-                showView('settings');
-                return;
-            }
-            
+            // Use hardcoded M-Pesa credentials
             statusDiv.innerHTML = '<div style="background: #ff9800; color: white; padding: 10px; border-radius: 5px;">⏳ Sending STK Push to customer phone...</div>';
             
-            // Simulate STK push (in production, call Safaricom API)
+            // Log the credentials being used (for debugging)
+            console.log("Using hardcoded M-Pesa credentials:", {
+                consumerKey: MPESA_CONFIG.consumerKey.substring(0, 5) + '...',
+                shortCode: MPESA_CONFIG.shortCode,
+                environment: MPESA_CONFIG.environment
+            });
+            
             console.log("Sending STK Push:", { phone, amount, tenant: tenant.tName });
             
-            // Simulate successful payment after 5 seconds
+            // Simulate STK push (in production, call Safaricom API with hardcoded credentials)
             setTimeout(() => {
                 // Auto-record payment (in production, this comes from Safaricom callback)
                 recordMpesaPaymentFromAdmin({
@@ -2415,7 +2611,7 @@
                 
                 statusDiv.innerHTML = `<div style="background: #4caf50; color: white; padding: 10px; border-radius: 5px;">
                     ✅ STK Push sent to ${phone}. Customer should enter PIN.
-                    <br><small>Payment will auto-record after successful transaction.</small>
+                    <br><small>Using hardcoded M-Pesa credentials</small>
                 </div>`;
             }, 5000);
         };
@@ -2475,7 +2671,7 @@
             }
         };
 
-        // ========== EMAIL FUNCTIONS (Existing, copied from original) ==========
+        // ========== EMAIL FUNCTIONS ==========
         window.validateFlexibleEmail = () => {
             const emailInput = document.getElementById('flexibleRecipientEmail');
             const hint = document.getElementById('flexibleEmailHint');
@@ -2766,13 +2962,11 @@
             alert("📧 Enter recipient email and send this report");
         };
 
-        // ========== UPDATE NET FUNCTION (Existing) ==========
+        // ========== UPDATE NET FUNCTION ==========
         function updateNet() {
             const c = Number(document.getElementById('sColl').innerText.replace(/,/g,'')) || 0;
             const r = Number(document.getElementById('sRep').innerText.replace(/,/g,'')) || 0;
             const d = Number(document.getElementById('sDebt').innerText.replace(/,/g,'')) || 0;
-            
-            document.getElementById('sProf').innerText = (c - r).toLocaleString();
             
             const total = c + d + r || 1;
             document.getElementById('barColl').style.height = (c/total*100) + "%";
